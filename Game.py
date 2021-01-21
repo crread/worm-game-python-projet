@@ -1,6 +1,10 @@
 import sys
 import pygame
 import random
+import cmath
+
+from math import *
+from datetime import datetime
 
 from Floor import Floor
 from pygame.locals import *
@@ -25,6 +29,10 @@ class Game:
         self.numberPlayers = 2
         self.numberWorms = 3
         self.clock = pygame.time.Clock()
+        self.angle = -45
+        self.v0 = 50
+        self.time = 0
+        self.shooting = False
 
     def init(self):
         pygame.init()
@@ -39,6 +47,7 @@ class Game:
         self.playerList = {f'player{x + 1}': Player(self.numberWorms, self.WIDTH_SCREEN, self.HEIGHT_SCREEN,
                                                     (random.randint(0, 255), random.randint(0, 255),
                                                      random.randint(0, 255))) for x in range(0, self.numberPlayers)}
+
         self.sprites = pygame.sprite.Group()
         self.sprites.add(self.ground)
         for player in self.playerList:
@@ -50,6 +59,17 @@ class Game:
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     self.showMenu = not self.showMenu
+                if event.key == K_a:
+                    self.angle -= 1
+                if event.key == K_e:
+                    self.angle += 1
+                if event.key == K_1:
+                    self.v0 += 1
+                if event.key == K_2:
+                    self.v0 -= 1
+                if event.key == K_SPACE and not self.shooting:
+                    self.shooting = True
+                    self.time = 0
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if self.showMenu and self.gameStart:
@@ -100,12 +120,37 @@ class Game:
             pygame.quit()
             sys.exit()
 
-    def testDrawLine(self):
-        initWidth = 0
-        pos = pygame.mouse.get_pos()
-        while initWidth < self.WIDTH_SCREEN:
-            pygame.draw.circle(self.displayScreen, (230, 60, 30), (initWidth, pos[1]), 3, 0)
-            initWidth += 2
+    def getTrajectory(self, initX, initY):
+        g = 9.81
+        V0 = int(self.v0 * cos(radians(self.angle)))
+        W0 = int(self.v0 * sin(radians(self.angle)))
+        dt = 0.1
+        x = V0 * self.time + initX
+        y = 1 / 2 * g * pow(self.time, 2) + W0 * self.time + initY
+        self.time = self.time + dt
+        return x, y
+
+    def trajectoryPreviewShoot(self):
+        initX = 600
+        initY = self.HEIGHT_SCREEN - 30
+        positions = (1, 1)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        coef = 5
+        self.v0 = sqrt((abs(mouse_x) - abs(initX)) ** 2 + (abs(mouse_y) - abs(initY)) ** 2) / coef
+        pygame.draw.line(self.displayScreen, (0, 0, 0), (initX, initY), (mouse_x, mouse_y), 2)
+        self.time = 0
+        while positions[1] <= self.HEIGHT_SCREEN:
+            positions = self.getTrajectory(initX, initY)
+            pygame.draw.circle(self.displayScreen, (230, 60, 30), (positions[0], positions[1]), 3, 0)
+
+    def shoot(self):
+        initX = 600
+        initY = self.HEIGHT_SCREEN - 30
+        positions = self.getTrajectory(initX, initY)
+        pygame.draw.circle(self.displayScreen, (230, 60, 30), (positions[0], positions[1]), 10, 0)
+        if positions[1] >= self.HEIGHT_SCREEN:
+            self.time = 0
+            self.shooting = False
 
     def displayFPS(self):
         self.draw_text(str(int(self.clock.get_fps())), (255, 255, 255), 0, 0)
@@ -118,6 +163,8 @@ class Game:
 
     def draw_button(self, color, x, y, w, h):
         pygame.draw.rect(self.displayScreen, color, (x, y, w, h))
+
+    # !TODO refaire les widgets avec pygame-menu
 
     def drawMenuInGame(self):
         self.draw_text("EXIT", (255, 255, 255), self.WIDTH_SCREEN / 2 - self.font.size("EXIT")[0] / 2,
@@ -160,23 +207,39 @@ class Game:
         self.draw_text("EXIT", (255, 255, 255), self.WIDTH_SCREEN / 2 - self.font.size("EXIT")[0] / 2,
                        self.HEIGHT_SCREEN / 3 + self.HEIGHT_SCREEN / 3)
 
+    def drawPointTestAngleCalcul(self):
+        pygame.draw.circle(self.displayScreen, (0, 0, 0), (700, 700), 3, 0)  # origine
+        pygame.draw.circle(self.displayScreen, (0, 0, 0), (1000, 1000), 3, 0)  # vecteur A
+        pygame.draw.circle(self.displayScreen, (0, 0, 0), (1000, 500), 3, 0)  # vecteur B
+
+        # Calcul de l'angle
+
+        vectorA = (3, 3)
+        vectorB = (3, -2)
+
+        sqrtVectorA = (sqrt(vectorA[0] ** 2 + vectorA[1] ** 2))
+        sqrtVectorB = (sqrt(vectorB[0] ** 2 + vectorB[1] ** 2))
+
+        sumVectors = vectorA[0] * vectorA[1] + vectorB[0] * vectorB[1]
+
+        angle = sumVectors / sqrtVectorA * sqrtVectorB
+        print(angle)
+
     def gameLoop(self):
         while True:
-
             self.displayScreen.blit(self.BACKGROUND_IMAGE, (0, 0))
             self.inputEventListener()
             self.displayFPS()
-
             if self.gameStart:
-                self.testDrawLine()
-
+                if not self.shooting:
+                    self.trajectoryPreviewShoot()
+                else:
+                    self.shoot()
                 if self.showMenu:
                     self.drawMenuInGame()
-
                 for entity in self.sprites:
                     self.displayScreen.blit(entity.surface, entity.rectangle)
             else:
                 self.startMenu()
-
             pygame.display.update()
-            self.clock.tick(0)
+            self.clock.tick(60)
