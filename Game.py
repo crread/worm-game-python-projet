@@ -1,14 +1,13 @@
 import sys
 import pygame
 import random
-import cmath
 
 from math import *
-from datetime import datetime
 
 from Floor import Floor
 from pygame.locals import *
 from Player import Player
+from Projectile import Projectile
 
 
 class Game:
@@ -23,15 +22,13 @@ class Game:
         self.playerList = None
         self.font = None
         self.sprites = None
+        self.projectile = None
         self.showMenu = False
         self.gameStart = False
         self.GAME_TITLE = "worms fangame"
         self.numberPlayers = 2
         self.numberWorms = 3
         self.clock = pygame.time.Clock()
-        self.angle = -45
-        self.v0 = 50
-        self.time = 0
         self.shooting = False
 
     def init(self):
@@ -40,6 +37,7 @@ class Game:
         self.BACKGROUND_IMAGE = pygame.image.load("assets/background_bluemoon.png").convert()
         pygame.display.set_caption(self.GAME_TITLE)
         self.WIDTH_SCREEN, self.HEIGHT_SCREEN = pygame.display.get_surface().get_size()
+        self.projectile = Projectile(600, self.HEIGHT_SCREEN - 30, self.HEIGHT_SCREEN, self.WIDTH_SCREEN, self.displayScreen)
         self.font = pygame.font.SysFont(None, 100)
 
     def initGame(self):
@@ -59,17 +57,9 @@ class Game:
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     self.showMenu = not self.showMenu
-                if event.key == K_a:
-                    self.angle -= 1
-                if event.key == K_e:
-                    self.angle += 1
-                if event.key == K_1:
-                    self.v0 += 1
-                if event.key == K_2:
-                    self.v0 -= 1
                 if event.key == K_SPACE and not self.shooting:
                     self.shooting = True
-                    self.time = 0
+                    self.projectile.time = 0
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if self.showMenu and self.gameStart:
@@ -119,38 +109,6 @@ class Game:
             0] / 2 <= x <= self.WIDTH_SCREEN / 2 - self.font.size("EXIT")[0] / 2 + self.font.size("EXIT")[0]:
             pygame.quit()
             sys.exit()
-
-    def getTrajectory(self, initX, initY):
-        g = 9.81
-        V0 = int(self.v0 * cos(radians(self.angle)))
-        W0 = int(self.v0 * sin(radians(self.angle)))
-        dt = 0.1
-        x = V0 * self.time + initX
-        y = 1 / 2 * g * pow(self.time, 2) + W0 * self.time + initY
-        self.time = self.time + dt
-        return x, y
-
-    def trajectoryPreviewShoot(self):
-        initX = 600
-        initY = self.HEIGHT_SCREEN - 30
-        positions = (1, 1)
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        coef = 5
-        self.v0 = sqrt((abs(mouse_x) - abs(initX)) ** 2 + (abs(mouse_y) - abs(initY)) ** 2) / coef
-        pygame.draw.line(self.displayScreen, (0, 0, 0), (initX, initY), (mouse_x, mouse_y), 2)
-        self.time = 0
-        while positions[1] <= self.HEIGHT_SCREEN:
-            positions = self.getTrajectory(initX, initY)
-            pygame.draw.circle(self.displayScreen, (230, 60, 30), (positions[0], positions[1]), 3, 0)
-
-    def shoot(self):
-        initX = 600
-        initY = self.HEIGHT_SCREEN - 30
-        positions = self.getTrajectory(initX, initY)
-        pygame.draw.circle(self.displayScreen, (230, 60, 30), (positions[0], positions[1]), 10, 0)
-        if positions[1] >= self.HEIGHT_SCREEN:
-            self.time = 0
-            self.shooting = False
 
     def displayFPS(self):
         self.draw_text(str(int(self.clock.get_fps())), (255, 255, 255), 0, 0)
@@ -232,9 +190,9 @@ class Game:
             self.displayFPS()
             if self.gameStart:
                 if not self.shooting:
-                    self.trajectoryPreviewShoot()
+                    self.projectile.trajectoryPreviewShoot()
                 else:
-                    self.shoot()
+                    self.shooting = self.projectile.shootRocket()
                 if self.showMenu:
                     self.drawMenuInGame()
                 for entity in self.sprites:
