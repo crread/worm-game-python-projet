@@ -28,6 +28,10 @@ class Game:
         self.GAME_TITLE = "worms fangame"
         self.numberPlayers = 2
         self.numberWorms = 3
+        self.actualPlayer = 0
+        self.actualWorm = 0
+        self.playingPlayer = None
+        self.playingWorm = None
         self.clock = pygame.time.Clock()
         self.shooting = False
 
@@ -44,13 +48,11 @@ class Game:
 
     def initGame(self):
         self.ground = Floor(self.WIDTH_SCREEN, self.HEIGHT_SCREEN)
-        self.playerList = {f'player{x + 1}': Player(self.numberWorms, self.WIDTH_SCREEN, self.HEIGHT_SCREEN,
-                                                    (random.randint(0, 255), random.randint(0, 255),
-                                                     random.randint(0, 255))) for x in range(0, self.numberPlayers)}
+        self.playerList = list(Player(self.numberWorms, self.HEIGHT_SCREEN, self.WIDTH_SCREEN, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), self.displayScreen) for x in range(0, self.numberPlayers))
 
         self.sprites = pygame.sprite.Group()
         self.sprites.add(self.ground)
-        for player in self.playerList:
+        for player in range(len(self.playerList)):
             for worm in self.playerList[player].worms:
                 self.sprites.add(worm)
 
@@ -62,6 +64,19 @@ class Game:
                 if event.key == K_SPACE and not self.shooting:
                     self.shooting = True
                     self.projectile.time = 0
+                if event.key == pygame.K_n:
+                    self.actualPlayer = self.actualPlayer + 1
+                    if self.actualPlayer > self.numberPlayers - 1:
+                        self.actualPlayer = 0
+                        self.actualWorm = self.actualWorm + 1
+                    if self.actualWorm > self.numberWorms - 1:
+                        self.actualWorm = 0
+                if event.key == pygame.K_d:
+                    print("I MOVE LEFT")
+                    self.playerList[self.actualPlayer].worms[self.actualWorm].moveleft()
+                if event.key == pygame.K_q:
+                    print("I MOVE RIGHT")
+                    self.playerList[self.actualPlayer].worms[self.actualWorm].moveright()
                 if event.key == K_p:
                     self.projectile.wind.getNewWind()
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -119,6 +134,12 @@ class Game:
 
     def draw_text(self, text, color, x, y):
         textobj = self.font.render(text, 10, color)
+        textrect = textobj.get_rect()
+        textrect.topleft = (x, y)
+        self.displayScreen.blit(textobj, textrect)
+
+    def draw_text_with_font(self, text, color, x, y, font):
+        textobj = font.render(text, 10, color)
         textrect = textobj.get_rect()
         textrect.topleft = (x, y)
         self.displayScreen.blit(textobj, textrect)
@@ -187,6 +208,20 @@ class Game:
         angle = sumVectors / sqrtVectorA * sqrtVectorB
         print(angle)
 
+    def play(self):
+        self.playingPlayer = self.playerList[self.actualPlayer]
+        self.playingWorm = self.playingPlayer.worms[self.actualWorm]
+
+        for player in range(len(self.playerList)):
+            for worm in self.playerList[player].worms:
+                self.draw_text_with_font(str(worm.health), worm.color, worm.x - 10,
+                                         worm.y - 20, worm.font)
+        self.draw_text("Player " + str(self.actualPlayer)+1, (255, 255, 255), 0, 100)
+        self.draw_text("Worm " + str(self.actualWorm)+1, (255, 255, 255), 0, 200)
+
+        self.playingWorm.select()
+
+
     def gameLoop(self):
         while True:
             self.displayScreen.blit(self.BACKGROUND_IMAGE, (0, 0))
@@ -201,6 +236,7 @@ class Game:
                     self.drawMenuInGame()
                 for entity in self.sprites:
                     self.displayScreen.blit(entity.surface, entity.rectangle)
+                self.play()
             else:
                 self.startMenu()
             pygame.display.update()
