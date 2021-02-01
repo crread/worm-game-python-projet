@@ -1,12 +1,14 @@
+import math
 import pygame
 
-from pygame.locals import *
 from math import *
+from Wind import Wind
 
 
 class Projectile:
     def __init__(self, x, y, height, width, screen):
         super().__init__()
+        self.wind = Wind()
         self.x = x
         self.y = y
         self.angle = -45
@@ -22,19 +24,21 @@ class Projectile:
         self.y = y
 
     def getTrajectory(self, initX, initY):
-        g = 9.81
-        vitesse = {'V0': int(self.v0 * cos(radians(self.angle))), 'W0': int(self.v0 * sin(radians(self.angle)))}
+        g = -9.81
+        resistanceCoef = 0.05
+        initSpeed = {'V0': int(self.v0 * cos(radians(self.angle))), 'W0': int(self.v0 * sin(radians(self.angle)))}
+        initSpeed['V0'] = initSpeed['V0'] + 0.2 * self.wind.wind['x']
+        initSpeed['W0'] = initSpeed['W0'] + 0.2 * self.wind.wind['y']
         dt = 0.1
-        x = vitesse['V0'] * self.time + initX
-        if self.shoot:
-            print(int(vitesse['V0'] * self.time), int(vitesse['W0'] * self.time))
-        y = 1 / 2 * g * pow(self.time, 2) + vitesse['W0'] * self.time + initY
+        x = int(initSpeed['V0'] / resistanceCoef * (1 - math.exp(-resistanceCoef * self.time)) + initX)
+        y = int((initSpeed['W0'] / resistanceCoef + g / pow(resistanceCoef, 2)) * (
+                    1 - math.exp(-resistanceCoef * self.time)) - (g * self.time) / resistanceCoef + initY)
         self.time = self.time + dt
         return x, y
 
-    #def projectileBounce(self):
+    # def projectileBounce(self):
 
-
+    # Calculus for trajectory
 
     def trajectoryPreviewShoot(self):
         positions = (0, 0)

@@ -35,9 +35,11 @@ class Game:
         pygame.init()
         self.displayScreen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
         self.BACKGROUND_IMAGE = pygame.image.load("assets/background_bluemoon.png").convert()
+
         pygame.display.set_caption(self.GAME_TITLE)
         self.WIDTH_SCREEN, self.HEIGHT_SCREEN = pygame.display.get_surface().get_size()
-        self.projectile = Projectile(600, self.HEIGHT_SCREEN - 30, self.HEIGHT_SCREEN, self.WIDTH_SCREEN, self.displayScreen)
+        self.projectile = Projectile(600, self.HEIGHT_SCREEN - 300, self.HEIGHT_SCREEN, self.WIDTH_SCREEN,
+                                     self.displayScreen)
         self.font = pygame.font.SysFont(None, 100)
 
     def initGame(self):
@@ -60,6 +62,8 @@ class Game:
                 if event.key == K_SPACE and not self.shooting:
                     self.shooting = True
                     self.projectile.time = 0
+                if event.key == K_p:
+                    self.projectile.wind.getNewWind()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if self.showMenu and self.gameStart:
