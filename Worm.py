@@ -15,8 +15,9 @@ class Worm(pygame.sprite.Sprite):
         self.displayScreen = SCREEN
         self.color = COLOR
         self.font = pygame.font.SysFont(None, 15)
+        self.movingSpeed = 2
 
-    def select(self):
+    def selected(self):
         self.draw_text("Worm " + str(self.number), self.color, self.x-20, self.y-30)
 
     def draw_text(self, text, color, x, y):
@@ -25,15 +26,11 @@ class Worm(pygame.sprite.Sprite):
         textrect.topleft = (x, y)
         self.displayScreen.blit(textobj, textrect)
 
-    def moveright(self):
-        self.x = self.x - 5
-        self.surface = pygame.Surface((20, 20))
-        self.surface.fill(self.color)
-        self.rectangle = self.surface.get_rect(center=(self.x, self.y))
-
-
-    def moveleft(self):
-        self.x = self.x + 5
+    def moveWorm(self, direction):
+        if direction is "right":
+            self.x = self.x + self.movingSpeed
+        elif direction is "left":
+            self.x = self.x - self.movingSpeed
         self.surface = pygame.Surface((20, 20))
         self.surface.fill(self.color)
         self.rectangle = self.surface.get_rect(center=(self.x, self.y))

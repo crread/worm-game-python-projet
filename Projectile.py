@@ -3,6 +3,7 @@ import pygame
 
 from math import *
 from Wind import Wind
+from Clock import Clock
 
 
 class Projectile:
@@ -18,6 +19,8 @@ class Projectile:
         self.WIDTH_SCREEN = width
         self.SCREEN = screen
         self.shoot = False
+        self.typeProjectile = None
+        self.grenadeClock = None
 
     def updateInitPosition(self, x, y):
         self.x = x
@@ -36,26 +39,40 @@ class Projectile:
         self.time = self.time + dt
         return x, y
 
-    # def projectileBounce(self):
-
-    # Calculus for trajectory
-
     def trajectoryPreviewShoot(self):
         positions = (0, 0)
         mouse_x, mouse_y = pygame.mouse.get_pos()
         coef = 5
-        self.v0 = sqrt((abs(mouse_x) - abs(self.x)) ** 2 + (abs(mouse_y) - abs(self.y)) ** 2) / coef
+        if sqrt((abs(mouse_x) - abs(self.x)) ** 2 + (abs(mouse_y) - abs(self.y)) ** 2) / coef < 100:
+            self.v0 = sqrt((abs(mouse_x) - abs(self.x)) ** 2 + (abs(mouse_y) - abs(self.y)) ** 2) / coef
+        else:
+            self.v0 = 100
         pygame.draw.line(self.SCREEN, (0, 0, 0), (self.x, self.y), (mouse_x, mouse_y), 2)
         self.time = 0
         while positions[1] <= self.HEIGHT_SCREEN:
             positions = self.getTrajectory(self.x, self.y)
             pygame.draw.circle(self.SCREEN, (230, 60, 30), (positions[0], positions[1]), 3, 0)
 
+    #def isShooting(self):
+
+
     def shootRocket(self):
         self.shoot = True
         positions = self.getTrajectory(self.x, self.y)
         pygame.draw.circle(self.SCREEN, (230, 60, 30), (positions[0], positions[1]), 10, 0)
+
         if positions[1] >= self.HEIGHT_SCREEN:
+            self.time = 0
+            self.shoot = False
+            return False
+        return True
+
+    def shootGrenade(self):
+        self.shoot = True
+        positions = self.getTrajectory(self.x, self.y)
+        pygame.draw.circle(self.SCREEN, (230, 60, 30), (positions[0], positions[1]), 10, 0)
+        if not self.grenadeClock.timePassedIsUnderLimit():
+            self.grenadeClock = None
             self.time = 0
             self.shoot = False
             return False

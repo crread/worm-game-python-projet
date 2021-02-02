@@ -3,11 +3,11 @@ import pygame
 import random
 
 from math import *
-
 from Floor import Floor
 from pygame.locals import *
 from Player import Player
 from Projectile import Projectile
+from Clock import Clock
 
 
 class Game:
@@ -33,6 +33,7 @@ class Game:
         self.playingPlayer = None
         self.playingWorm = None
         self.clock = pygame.time.Clock()
+        self.clockTurn = None
         self.shooting = False
 
     def init(self):
@@ -47,16 +48,33 @@ class Game:
         self.font = pygame.font.SysFont(None, 100)
 
     def initGame(self):
+        self.clockTurn = Clock(30)
         self.ground = Floor(self.WIDTH_SCREEN, self.HEIGHT_SCREEN)
-        self.playerList = list(Player(self.numberWorms, self.HEIGHT_SCREEN, self.WIDTH_SCREEN, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), self.displayScreen) for x in range(0, self.numberPlayers))
+        self.playerList = list(Player(self.numberWorms, self.HEIGHT_SCREEN, self.WIDTH_SCREEN,
+                                      (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
+                                      self.displayScreen) for x in range(0, self.numberPlayers))
 
         self.sprites = pygame.sprite.Group()
         self.sprites.add(self.ground)
         for player in range(len(self.playerList)):
             for worm in self.playerList[player].worms:
                 self.sprites.add(worm)
+        self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
+                                           self.playerList[self.actualPlayer].worms[self.actualWorm].y)
 
-    def inputEventListener(self):
+    def keyPressedEvents(self):
+        key = pygame.key.get_pressed()
+
+        if key[pygame.K_q] and not self.shooting:
+            self.playerList[self.actualPlayer].worms[self.actualWorm].moveWorm("left")
+            self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
+                                               self.playerList[self.actualPlayer].worms[self.actualWorm].y)
+        if key[pygame.K_d] and not self.shooting:
+            self.playerList[self.actualPlayer].worms[self.actualWorm].moveWorm("right")
+            self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
+                                               self.playerList[self.actualPlayer].worms[self.actualWorm].y)
+
+    def keyDownEvents(self):
         for event in pygame.event.get():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
@@ -64,21 +82,7 @@ class Game:
                 if event.key == K_SPACE and not self.shooting:
                     self.shooting = True
                     self.projectile.time = 0
-                if event.key == pygame.K_n:
-                    self.actualPlayer = self.actualPlayer + 1
-                    if self.actualPlayer > self.numberPlayers - 1:
-                        self.actualPlayer = 0
-                        self.actualWorm = self.actualWorm + 1
-                    if self.actualWorm > self.numberWorms - 1:
-                        self.actualWorm = 0
-                if event.key == pygame.K_d:
-                    print("I MOVE LEFT")
-                    self.playerList[self.actualPlayer].worms[self.actualWorm].moveleft()
-                if event.key == pygame.K_q:
-                    print("I MOVE RIGHT")
-                    self.playerList[self.actualPlayer].worms[self.actualWorm].moveright()
-                if event.key == K_p:
-                    self.projectile.wind.getNewWind()
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if self.showMenu and self.gameStart:
@@ -89,6 +93,10 @@ class Game:
                         sys.exit()
                 if not self.gameStart:
                     self.EventInputShowMenu(x, y)
+
+    def inputEventListener(self):
+        self.keyPressedEvents()
+        self.keyDownEvents()
 
     def EventInputShowMenu(self, x, y):
         if self.HEIGHT_SCREEN / 2 - self.HEIGHT_SCREEN / 3 - self.font.size("2")[
@@ -130,7 +138,7 @@ class Game:
             sys.exit()
 
     def displayFPS(self):
-        self.draw_text(str(int(self.clock.get_fps())), (255, 255, 255), 0, 0)
+        self.draw_text_with_font(str(int(self.clock.get_fps())), (255, 255, 255), 0, 0, self.font)
 
     def draw_text(self, text, color, x, y):
         textobj = self.font.render(text, 10, color)
@@ -191,9 +199,6 @@ class Game:
                        self.HEIGHT_SCREEN / 3 + self.HEIGHT_SCREEN / 3)
 
     def drawPointTestAngleCalcul(self):
-        pygame.draw.circle(self.displayScreen, (0, 0, 0), (700, 700), 3, 0)  # origine
-        pygame.draw.circle(self.displayScreen, (0, 0, 0), (1000, 1000), 3, 0)  # vecteur A
-        pygame.draw.circle(self.displayScreen, (0, 0, 0), (1000, 500), 3, 0)  # vecteur B
 
         # Calcul de l'angle
 
@@ -208,7 +213,7 @@ class Game:
         angle = sumVectors / sqrtVectorA * sqrtVectorB
         print(angle)
 
-    def play(self):
+    def drawWormsLife(self):
         self.playingPlayer = self.playerList[self.actualPlayer]
         self.playingWorm = self.playingPlayer.worms[self.actualWorm]
 
@@ -216,28 +221,55 @@ class Game:
             for worm in self.playerList[player].worms:
                 self.draw_text_with_font(str(worm.health), worm.color, worm.x - 10,
                                          worm.y - 20, worm.font)
-        self.draw_text("Player " + str(self.actualPlayer)+1, (255, 255, 255), 0, 100)
-        self.draw_text("Worm " + str(self.actualWorm)+1, (255, 255, 255), 0, 200)
+        self.draw_text("Player " + str(self.actualPlayer + 1), (255, 255, 255), 0, 100)
+        self.draw_text("Worm " + str(self.actualWorm + 1), (255, 255, 255), 0, 200)
 
-        self.playingWorm.select()
+        self.playingWorm.selected()
 
+    def changePlayerTurn(self):
+        self.clockTurn.resetTimer()
+        self.actualPlayer = self.actualPlayer + 1
+        if self.actualPlayer > self.numberPlayers - 1:
+            self.actualPlayer = 0
+        if self.actualWorm > self.numberWorms - 1:
+            self.actualWorm = self.actualWorm + 1
+            self.actualWorm = 0
+        self.projectile.wind.getNewWind()
+        self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
+                                           self.playerList[self.actualPlayer].worms[self.actualWorm].y)
+
+    def displaySecondsLeft(self):
+        self.draw_text(str(self.clockTurn.limitTimer - self.clockTurn.getTimePassed()), (255, 255, 255),
+                       self.WIDTH_SCREEN / 2, 100)
+
+    def drawInGameLoop(self):
+        self.displayScreen.blit(self.BACKGROUND_IMAGE, (0, 0))
+        if self.gameStart:
+            self.displayFPS()
+            self.displaySecondsLeft()
+            if not self.shooting:
+                self.projectile.trajectoryPreviewShoot()
+            else:
+                self.shooting = self.projectile.shootRocket()
+                if not self.shooting:
+                    self.changePlayerTurn()
+            if self.showMenu:
+                self.drawMenuInGame()
+            self.drawWormsLife()
+            for entity in self.sprites:
+                self.displayScreen.blit(entity.surface, entity.rectangle)
+        else:
+            self.startMenu()
+
+    def eventsInGameLoop(self):
+        if self.gameStart:
+            if not self.clockTurn.timePassedIsUnderLimit():
+                self.changePlayerTurn()
 
     def gameLoop(self):
         while True:
-            self.displayScreen.blit(self.BACKGROUND_IMAGE, (0, 0))
             self.inputEventListener()
-            self.displayFPS()
-            if self.gameStart:
-                if not self.shooting:
-                    self.projectile.trajectoryPreviewShoot()
-                else:
-                    self.shooting = self.projectile.shootRocket()
-                if self.showMenu:
-                    self.drawMenuInGame()
-                for entity in self.sprites:
-                    self.displayScreen.blit(entity.surface, entity.rectangle)
-                self.play()
-            else:
-                self.startMenu()
+            self.eventsInGameLoop()
+            self.drawInGameLoop()
             pygame.display.update()
             self.clock.tick(60)
