@@ -1,4 +1,3 @@
-import pygame
 import math
 import random
 
@@ -13,8 +12,8 @@ class Wind:
         self.init()
 
     def init(self):
-        self.arrowWind = pygame.image.load("assets/arrow.png").convert_alpha()
-        self.arrowWind = pygame.transform.scale(self.arrowWind, (100, 100))
+        #self.arrowWind = pygame.image.load("assets/arrow.png").convert_alpha()
+        #self.arrowWind = pygame.transform.scale(self.arrowWind, (100, 100))
         self.getNewWind()
 
     def getNewWind(self):
