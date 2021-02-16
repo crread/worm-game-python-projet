@@ -77,8 +77,10 @@ class Game:
 
     def updateWormsPositions(self):
         for sprite in self.sprites:
-            while len(pygame.sprite.spritecollide(sprite, self.groundGroup, False, pygame.sprite.collide_mask)) == 0:
-                if sprite.y < self.HEIGHT_SCREEN + 50:
+            if sprite.isJump:
+                sprite.jump()
+            else:
+                if sprite.y < self.HEIGHT_SCREEN + 50 and len(pygame.sprite.spritecollide(sprite, self.groundGroup, False, pygame.sprite.collide_mask)) == 0:
                     sprite.updatePositionForSetting()
 
     def changePlayerTurn(self):
@@ -125,6 +127,8 @@ class Game:
                 if event.key == K_2 and not self.shooting:
                     self.shooting = True
                     self.projectile.initShoot("grenade")
+                if event.key == K_SPACE and not self.playerList[self.actualPlayer].worms[self.actualWorm].isJump:
+                    self.playerList[self.actualPlayer].worms[self.actualWorm].startJump()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
@@ -298,4 +302,4 @@ class Game:
             self.eventsInGameLoop()
             self.drawInGameLoop()
             pygame.display.update()
-            self.clock.tick(0)
+            self.clock.tick(60)
