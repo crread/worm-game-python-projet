@@ -68,7 +68,10 @@ class Game:
             for worm in self.playerList[player].worms:
                 self.sprites.add(worm)
 
-        self.updateWormsPositions()
+        for sprite in self.sprites:
+            while len(pygame.sprite.spritecollide(sprite, self.groundGroup, False, pygame.sprite.collide_mask)) == 0:
+                if sprite.y < self.HEIGHT_SCREEN + 50:
+                    sprite.updatePositionForSetting()
 
         self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
                                            self.playerList[self.actualPlayer].worms[self.actualWorm].y)

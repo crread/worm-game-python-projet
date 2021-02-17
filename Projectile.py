@@ -68,7 +68,7 @@ class Projectile:
 
     def updateInitPosition(self, x, y):
         self.initX = x
-        self.initY = y - 10
+        self.initY = y - 25
 
     def getTrajectory(self):
         g = -9.81
@@ -116,11 +116,15 @@ class Projectile:
         self.sprites["grenade"].rect.y = self.y
         self.sprites["grenade"].mask = pygame.mask.from_surface(self.sprites["grenade"].image)
         self.group.add(ground.spriteLandScape)
-        if pygame.sprite.spritecollide(self.sprites["grenade"], self.group, False, pygame.sprite.collide_mask):
+        if not self.grenadeClock.timePassedIsUnderLimit():
             self.group.remove(ground.spriteLandScape)
             ground.updateMap([self.y, self.x, 35])
             self.shooting = False
         else:
+            if pygame.sprite.spritecollide(self.sprites["grenade"], self.group, False, pygame.sprite.collide_mask):
+                self.group.remove(ground.spriteLandScape)
+                ground.updateMap([self.y, self.x, 35])
+                self.shooting = False
             self.shooting = True
 
     def resetProjectile(self):
