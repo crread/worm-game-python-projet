@@ -104,6 +104,8 @@ class Game:
                 if sqrt((abs(sprite.x) - abs(self.projectile.x)) ** 2 + (
                         abs(sprite.y) - abs(self.projectile.y)) ** 2) <= 100:
                     sprite.health -= self.projectile.sprites[self.projectile.typeProjectile].damage
+        for player in self.playerList:
+            player.updateWormsList()
         provisionalSpriteList = self.sprites
         self.sprites = [sprite for sprite in provisionalSpriteList if sprite.health > 0]
 
