@@ -126,17 +126,12 @@ class Projectile:
         self.sprites["grenade"].rect.y = self.y
         self.sprites["grenade"].mask = pygame.mask.from_surface(self.sprites["grenade"].image)
         self.group.add(ground.spriteLandScape)
-        if not self.grenadeClock.timePassedIsUnderLimit():
+        if not self.grenadeClock.timePassedIsUnderLimit() or pygame.sprite.spritecollide(self.sprites["grenade"], self.group, False, pygame.sprite.collide_mask):
             self.group.remove(ground.spriteLandScape)
             ground.updateMap([self.y, self.x, 35])
             self.shooting = False
         else:
-            if pygame.sprite.spritecollide(self.sprites["grenade"], self.group, False, pygame.sprite.collide_mask):
-                self.group.remove(ground.spriteLandScape)
-                ground.updateMap([self.y, self.x, 35])
-                self.shooting = False
-            else :
-                self.shooting = True
+            self.shooting = True
 
     def resetProjectile(self):
 
