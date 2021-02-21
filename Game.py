@@ -59,6 +59,10 @@ class Game:
         self.ground.initLandscape(self.WIDTH_SCREEN, self.HEIGHT_SCREEN)
         self.groundGroup = pygame.sprite.GroupSingle()
         self.groundGroup.add(self.ground.spriteLandScape)
+        if self.numberPlayers < 2:
+            self.numberPlayers = 2
+        elif self.numberPlayers > 4:
+            self.numberPlayers = 4
         self.playerList = list(Player(self.numberWorms, self.HEIGHT_SCREEN, self.WIDTH_SCREEN,
                                       (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
                                       self.displayScreen) for x in range(0, self.numberPlayers))
@@ -73,11 +77,6 @@ class Game:
                 if sprite.y < self.HEIGHT_SCREEN + 50:
                     sprite.updatePositionForSetting()
 
-        self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
-                                           self.playerList[self.actualPlayer].worms[self.actualWorm].y)
-
-    # Important Functions
-
     def updateWormsPositions(self):
         for sprite in self.sprites:
             if sprite.isJump:
@@ -88,22 +87,27 @@ class Game:
 
     def changePlayerTurn(self):
         self.clockTurn.resetTimer()
-        self.actualPlayer = self.actualPlayer + 1
-        if self.actualPlayer > self.numberPlayers - 1:
-            self.actualPlayer = 0
-        if self.actualWorm > self.numberWorms - 1:
-            self.actualWorm = self.actualWorm + 1
-            self.actualWorm = 0
+        self.actualPlayer = (self.actualPlayer + 1) % self.numberPlayers
+        if self.actualPlayer == 0:
+            for player in self.playerList:
+                player.updateCurrentWorm()
+        provisionalPlayerList = self.playerList
+        self.playerList = [player for player in provisionalPlayerList if len(player.worms) > 0]
+        self.numberPlayers = len(self.playerList)
+        if self.numberPlayers == 1:
+            self.gameStart = False
+            return
+        self.actualWorm = self.playerList[self.actualPlayer].currentWorm
         self.projectile.wind.getNewWind()
-        self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
-                                           self.playerList[self.actualPlayer].worms[self.actualWorm].y)
 
     def distanceBetweenExplosionAndWorm(self):
         for sprite in self.sprites:
             if isinstance(sprite, Worm):
                 if sqrt((abs(sprite.x) - abs(self.projectile.x)) ** 2 + (
-                        abs(sprite.y) - abs(self.projectile.y)) ** 2) <= 100:
+                        abs(sprite.y) - abs(self.projectile.y)) ** 2) <= self.projectile.sprites[self.projectile.typeProjectile].radiusDamage:
                     sprite.health -= self.projectile.sprites[self.projectile.typeProjectile].damage
+        for player in self.playerList:
+            player.updateWormsList()
         provisionalSpriteList = self.sprites
         self.sprites = [sprite for sprite in provisionalSpriteList if sprite.health > 0]
 
@@ -112,12 +116,8 @@ class Game:
 
         if key[pygame.K_q] and not self.shooting:
             self.playerList[self.actualPlayer].worms[self.actualWorm].moveWorm("left")
-            self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
-                                               self.playerList[self.actualPlayer].worms[self.actualWorm].y)
         if key[pygame.K_d] and not self.shooting:
             self.playerList[self.actualPlayer].worms[self.actualWorm].moveWorm("right")
-            self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
-                                               self.playerList[self.actualPlayer].worms[self.actualWorm].y)
 
     def keyDownEvents(self):
         for event in pygame.event.get():
@@ -276,16 +276,21 @@ class Game:
                         self.displayScreen.blit(self.projectile.sprites["grenade"].image,
                                                 (self.projectile.x, self.projectile.y))
                         self.draw_text(
+
                             str(self.projectile.grenadeClock.limitTimer - self.projectile.grenadeClock.getTimePassed()),
                             (255, 255, 255), self.projectile.x - 10, self.projectile.y - 50, "grenade")
                     else:
                         self.displayScreen.blit(self.projectile.sprites["rocket"].surface,
-                                                (self.projectile.x, self.projectile.y))
+                                               (self.projectile.x, self.projectile.y))
                 else:
                     self.distanceBetweenExplosionAndWorm()
                     self.projectile.resetProjectile()
                     self.changePlayerTurn()
+                    if not self.gameStart:
+                        return
             self.updateWormsPositions()
+            self.projectile.updateInitPosition(self.playerList[self.actualPlayer].worms[self.actualWorm].x,
+                                               self.playerList[self.actualPlayer].worms[self.actualWorm].y)
             if self.showMenu:
                 self.drawMenuInGame()
             self.drawWormsLife()

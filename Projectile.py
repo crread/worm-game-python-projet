@@ -36,14 +36,16 @@ class Projectile:
         self.sprites["grenade"].image.set_colorkey((0, 0, 0))
         self.sprites["grenade"].rect = self.sprites["grenade"].image.get_rect(center=(self.initX, self.initY))
         self.sprites["grenade"].mask = pygame.mask.from_surface(self.sprites["grenade"].image)
-        self.sprites["grenade"].damage = 35
+        self.sprites["grenade"].damage = 20
+        self.sprites["grenade"].radiusDamage = 35
 
         self.sprites["rocket"] = pygame.sprite.Sprite()
         self.sprites["rocket"].surface = pygame.Surface((20, 20), pygame.SRCALPHA)
         self.sprites["rocket"].surface.fill((230, 60, 30))
         self.sprites["rocket"].rect = self.sprites["rocket"].surface.get_rect(center=(self.initX, self.initY))
         self.sprites["rocket"].mask = pygame.mask.from_surface(self.sprites["rocket"].surface)
-        self.sprites["rocket"].damage = 50
+        self.sprites["rocket"].damage = 35
+        self.sprites["rocket"].radiusDamage = 50
 
         self.grenadeClock = Clock(4)
         self.group = pygame.sprite.GroupSingle()
@@ -56,7 +58,6 @@ class Projectile:
         self.shooting = True
 
     def isShooting(self):
-        print(self.shooting)
         return self.shooting
 
     def updateShootingProjectile(self, floorMask):
@@ -70,16 +71,25 @@ class Projectile:
         self.initX = x
         self.initY = y - 25
 
+    def velocityX(self, v0):
+        Vx = int(-0.05*-v0/0.05 * math.exp(-0.05*self.time))
+
+    def velocityY(self, W0):
+        Vy = int(9.81/0.05+(W0-9.81/0.05)*math.exp(-0.05*self.time))
+
     def getTrajectory(self):
         g = -9.81
         resistanceCoef = 0.05
         initSpeed = {'V0': int(self.v0 * cos(self.angle)), 'W0': int(self.v0 * sin(self.angle))}
-        initSpeed['V0'] = initSpeed['V0'] + 0.2 * self.wind.wind['x']
-        initSpeed['W0'] = initSpeed['W0'] + 0.2 * self.wind.wind['y']
+        initSpeed['V0'] = int(initSpeed['V0'] + 0.2 * self.wind.wind['x'])
+        initSpeed['W0'] = int(initSpeed['W0'] + 0.2 * self.wind.wind['y'])
         dt = 0.1
         self.x = int(initSpeed['V0'] / resistanceCoef * (1 - math.exp(-resistanceCoef * self.time)) + self.initX)
         self.y = int((initSpeed['W0'] / resistanceCoef + g / pow(resistanceCoef, 2)) * (
                 1 - math.exp(-resistanceCoef * self.time)) - (g * self.time) / resistanceCoef + self.initY)
+        #if self.shooting:
+            #self.velocityX(initSpeed['V0'])
+            #self.velocityY(initSpeed['W0'])
         self.time = self.time + dt
 
     def trajectoryPreviewShoot(self):
@@ -125,7 +135,8 @@ class Projectile:
                 self.group.remove(ground.spriteLandScape)
                 ground.updateMap([self.y, self.x, 35])
                 self.shooting = False
-            self.shooting = True
+            else :
+                self.shooting = True
 
     def resetProjectile(self):
 
